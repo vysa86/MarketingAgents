@@ -1,3 +1,7 @@
+
+# Marketing Agents Project
+
+![Main Output](Output/Global Market Presence.png)
 # Strategos — Product Strategy AI Agent
 
 A 5-agent AI pipeline that analyses any product using Kotler's Marketing Management frameworks.
