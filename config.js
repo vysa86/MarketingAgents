@@ -32,7 +32,7 @@ module.exports = {
 },
 
   // ── Server settings ──────────────────────────────────────────────────────
-  PORT: process.env.PORT || 3050,
+  PORT: process.env.PORT || 3000,
 
   // ── Research agent settings ──────────────────────────────────────────────
   RESEARCH: {
