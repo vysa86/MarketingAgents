@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strategos — Product Strategy Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0d0d0d; --paper: #f5f0e8; --cream: #ede7d5;
+    --accent: #c84b2f; --accent2: #2a6496;
+    --muted: #7a7060; --border: #ccc5b0; --card: #ffffff;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--paper); color: var(--ink); font-family: 'DM Sans', sans-serif; font-weight: 300; min-height: 100vh; }
+
+  /* ── Masthead ── */
+  .masthead { border-bottom: 3px double var(--ink); padding: 20px 40px 16px; display: flex; align-items: baseline; gap: 24px; background: var(--paper); position: relative; }
+  .masthead::after { content: ''; position: absolute; bottom: 4px; left: 0; right: 0; border-bottom: 1px solid var(--ink); }
+  .masthead-title { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 2.2rem; letter-spacing: -1px; }
+  .masthead-sub { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; border-left: 1px solid var(--border); padding-left: 16px; }
+  .edition-tag { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--muted); text-align: right; line-height: 1.6; }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 40px 32px; }
+
+  /* ── Input ── */
+  .input-section { display: grid; grid-template-columns: 1fr auto; border: 2px solid var(--ink); margin-bottom: 32px; background: var(--card); box-shadow: 4px 4px 0 var(--ink); }
+  .input-label { grid-column: 1/-1; padding: 12px 20px 8px; border-bottom: 1px solid var(--border); font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); background: var(--cream); }
+  #productInput { border: none; outline: none; padding: 18px 20px; font-family: 'Playfair Display', serif; font-size: 1.4rem; background: transparent; color: var(--ink); width: 100%; }
+  #productInput::placeholder { color: var(--border); font-style: italic; }
+  #analyzeBtn { background: var(--ink); color: var(--paper); border: none; padding: 18px 28px; font-family: 'DM Mono', monospace; font-size: 0.75rem; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: background 0.2s; white-space: nowrap; border-left: 2px solid var(--ink); }
+  #analyzeBtn:hover { background: var(--accent); }
+  #analyzeBtn:disabled { background: var(--muted); cursor: not-allowed; }
+
+  /* ── Pipeline ── */
+  .pipeline { display: none; margin-bottom: 32px; }
+  .pipeline.visible { display: block; }
+  .pipeline-title { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .pipeline-steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .pipeline-step { padding: 10px 12px; border: 1px solid var(--border); background: var(--card); font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--muted); transition: all 0.3s; }
+  .pipeline-step.active { border-color: var(--accent); color: var(--accent); background: #fff5f3; }
+  .pipeline-step.done { border-color: var(--accent2); color: var(--accent2); background: #f0f5fa; }
+  .pipeline-step-icon { font-size: 1rem; margin-bottom: 4px; }
+  .pipeline-step-label { text-transform: uppercase; letter-spacing: 1px; }
+  .status-msg { font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted); margin-top: 10px; min-height: 20px; }
+
+  /* ── Research strip ── */
+  .research-strip { display: none; margin-bottom: 28px; padding: 16px 20px; background: var(--cream); border: 1px solid var(--border); border-left: 4px solid var(--accent2); }
+  .research-strip.visible { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .research-item-label { font-family: 'DM Mono', monospace; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 3px; }
+  .research-item-value { font-size: 0.82rem; color: var(--ink); }
+
+  /* ── Product header ── */
+  .product-header { display: none; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px solid var(--ink); }
+  .product-header.visible { display: block; }
+  .product-kicker { font-family: 'DM Mono', monospace; font-size: 0.65rem; letter-spacing: 4px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  .product-name { font-family: 'Playfair Display', serif; font-size: 2.4rem; font-weight: 700; line-height: 1.1; }
+  .product-tagline { font-size: 0.85rem; color: var(--muted); margin-top: 8px; }
+
+  /* ── Analysis cards ── */
+  .analysis-grid { display: grid; gap: 24px; }
+  .analysis-card { border: 1px solid var(--border); background: var(--card); box-shadow: 3px 3px 0 rgba(13,13,13,0.06); overflow: hidden; opacity: 0; transform: translateY(12px); transition: opacity 0.4s, transform 0.4s; }
+  .analysis-card.visible { opacity: 1; transform: translateY(0); }
+  .card-skeleton { padding: 24px; background: var(--cream); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+  .skeleton-line { height: 12px; background: var(--border); border-radius: 2px; margin-bottom: 10px; }
+  .skeleton-line.short { width: 40%; }
+  .skeleton-line.medium { width: 70%; }
+  .card-header { display: flex; align-items: center; gap: 16px; padding: 16px 24px; background: var(--cream); border-bottom: 1px solid var(--border); }
+  .card-number { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; color: var(--accent); line-height: 1; opacity: 0.5; flex-shrink: 0; }
+  .card-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; }
+  .card-subtitle { font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+  .card-body { padding: 24px; line-height: 1.75; font-size: 0.88rem; }
+  .card-body h3 { font-family: 'Playfair Display', serif; font-size: 0.95rem; font-weight: 700; margin: 18px 0 6px; }
+  .card-body h3:first-child { margin-top: 0; }
+  .card-body p { margin-bottom: 10px; }
+  .card-body p:last-child { margin-bottom: 0; }
+  .card-body strong { font-weight: 500; color: var(--accent2); }
+  .card-body em { color: var(--muted); font-style: italic; }
+  .card-body ul { padding-left: 18px; margin-bottom: 10px; }
+  .card-body li { margin-bottom: 3px; }
+  .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .tag { background: var(--ink); color: var(--paper); font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 1px; padding: 4px 10px; text-transform: uppercase; }
+  .tag.a { background: var(--accent); }
+  .tag.b { background: var(--accent2); }
+
+  /* ── Market section ── */
+  .market-section { display: none; margin-top: 24px; border: 1px solid var(--border); background: var(--card); box-shadow: 3px 3px 0 rgba(13,13,13,0.06); overflow: hidden; opacity: 0; transform: translateY(12px); transition: opacity 0.4s, transform 0.4s; }
+  .market-section.visible { display: block; opacity: 1; transform: translateY(0); }
+  .market-skeleton { padding: 40px 24px; background: var(--cream); text-align: center; animation: pulse 1.2s ease-in-out infinite; font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--muted); letter-spacing: 2px; }
+  .map-legend { display: flex; gap: 20px; padding: 12px 24px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .map-legend-item { display: flex; align-items: center; gap: 6px; font-family: 'DM Mono', monospace; font-size: 0.62rem; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .map-wrap { position: relative; background: var(--cream); border-bottom: 1px solid var(--border); }
+  #map-tooltip { display: none; position: absolute; pointer-events: none; background: var(--card); border: 1px solid var(--border); padding: 10px 14px; font-size: 0.8rem; min-width: 200px; max-width: 260px; z-index: 10; box-shadow: 2px 2px 0 rgba(13,13,13,0.08); }
+  #map-tooltip-name { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+  #map-tooltip-imp { color: var(--muted); line-height: 1.5; font-size: 0.78rem; }
+  .market-table-wrap { padding: 0 24px 24px; overflow-x: auto; }
+  .market-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 20px; }
+  .market-table th { text-align: left; padding: 8px 10px; font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid var(--ink); white-space: nowrap; }
+  .market-table td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .market-table tr:last-child td { border-bottom: none; }
+  .tier-badge { font-family: 'DM Mono', monospace; font-size: 0.6rem; letter-spacing: 1px; text-transform: uppercase; padding: 3px 8px; }
+
+  /* ── Error ── */
+  .error-box { padding: 20px; border: 2px solid var(--accent); background: #fff5f3; font-family: 'DM Mono', monospace; font-size: 0.8rem; color: var(--accent); margin-bottom: 24px; display: none; }
+  .error-box.visible { display: block; }
+  .footer-rule { margin-top: 48px; border-top: 3px double var(--ink); padding-top: 16px; font-family: 'DM Mono', monospace; font-size: 0.65rem; color: var(--muted); letter-spacing: 2px; text-align: center; }
+
+  @media (max-width: 640px) {
+    .masthead { padding: 16px 20px; flex-wrap: wrap; }
+    .masthead-title { font-size: 1.5rem; }
+    .edition-tag { display: none; }
+    .container { padding: 24px 16px; }
+    .input-section { grid-template-columns: 1fr; }
+    #analyzeBtn { width: 100%; border-left: none; border-top: 2px solid var(--ink); }
+    .pipeline-steps { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-title">Strategos</div>
+  <div class="masthead-sub">Product Strategy Intelligence</div>
+  <div class="edition-tag">5-Agent Pipeline<br>Kotler Framework Engine</div>
+</header>
+
+<div class="container">
+
+  <div class="input-section">
+    <div class="input-label">Enter Product or Service</div>
+    <input type="text" id="productInput" placeholder="e.g. Tata Neu, boAt earbuds, Zepto…" />
+    <button id="analyzeBtn" onclick="runAnalysis()">Analyse →</button>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="pipeline" id="pipeline">
+    <div class="pipeline-title">Agent Pipeline</div>
+    <div class="pipeline-steps">
+      <div class="pipeline-step" id="step0"><div class="pipeline-step-icon">🔍</div><div class="pipeline-step-label">Research</div></div>
+      <div class="pipeline-step" id="step1"><div class="pipeline-step-icon">🏷</div><div class="pipeline-step-label">Classify</div></div>
+      <div class="pipeline-step" id="step2"><div class="pipeline-step-icon">📐</div><div class="pipeline-step-label">Five Levels</div></div>
+      <div class="pipeline-step" id="step3"><div class="pipeline-step-icon">💡</div><div class="pipeline-step-label">Differentiate</div></div>
+      <div class="pipeline-step" id="step4"><div class="pipeline-step-icon">🌍</div><div class="pipeline-step-label">Markets</div></div>
+    </div>
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <div class="research-strip" id="researchStrip"></div>
+
+  <div class="product-header" id="productHeader">
+    <div class="product-kicker">Strategic Analysis Report</div>
+    <div class="product-name" id="displayName"></div>
+    <div class="product-tagline" id="displayTagline"></div>
+  </div>
+
+  <div class="analysis-grid" id="analysisGrid">
+    <div class="analysis-card" id="card0"><div class="card-skeleton"><div class="skeleton-line short"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div></div></div>
+    <div class="analysis-card" id="card1"><div class="card-skeleton"><div class="skeleton-line short"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div></div></div>
+    <div class="analysis-card" id="card2"><div class="card-skeleton"><div class="skeleton-line short"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div></div></div>
+  </div>
+
+  <div class="market-section" id="marketSection">
+    <div class="card-header">
+      <div class="card-number">IV</div>
+      <div>
+        <div class="card-title">Global Market Presence</div>
+        <div class="card-subtitle">Task 4 of 4 · Live Market Intelligence</div>
+      </div>
+    </div>
+    <div id="marketBody">
+      <div class="market-skeleton">MAPPING GLOBAL PRESENCE…</div>
+    </div>
+  </div>
+
+  <div class="footer-rule">Kotler · Marketing Management Framework · 5-Agent Pipeline</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+const NUMBERS = ['I','II','III'];
+const TAG_CLASSES = [['a'],['b'],['']];
+const TIER_COLORS = {
+  core:     { fill:"#1D9E75", hover:"#0F6E56", bg:"#e1f5ee", text:"#085041" },
+  growth:   { fill:"#378ADD", hover:"#185FA5", bg:"#e6f1fb", text:"#0C447C" },
+  emerging: { fill:"#EF9F27", hover:"#BA7517", bg:"#faeeda", text:"#854F0B" },
+};
+
+function mdToHtml(text) {
+  return text
+    .replace(/### (.+)/g,'<h3>$1</h3>')
+    .replace(/## (.+)/g,'<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^- (.+)/gm,'<li>$1</li>')
+    .split('\n').map(l => {
+      l = l.trim();
+      if (!l) return '';
+      if (l.startsWith('<h3>') || l.startsWith('<li>')) return l;
+      return `<p>${l}</p>`;
+    }).join('\n')
+    .replace(/(<li>[\s\S]+?<\/li>)+/g, m=>`<ul>${m}</ul>`)
+    .replace(/<p><\/p>/g,'');
+}
+
+function skeleton() {
+  return `<div class="card-skeleton"><div class="skeleton-line short"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div></div>`;
+}
+
+function renderCard(index, task) {
+  const card = document.getElementById(`card${index}`);
+  const tags = (task.tags||[]).map((t,j)=>`<span class="tag ${TAG_CLASSES[index][j]||''}">${t}</span>`).join('');
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-number">${NUMBERS[index]}</div>
+      <div><div class="card-title">${task.title}</div><div class="card-subtitle">Task ${index+1} of 4</div></div>
+    </div>
+    <div class="card-body">
+      ${tags?`<div class="tag-row">${tags}</div>`:''}
+      ${mdToHtml(task.content||'')}
+    </div>`;
+  card.classList.add('visible');
+}
+
+function setStep(active) {
+  for (let i=0;i<5;i++) {
+    const el = document.getElementById(`step${i}`);
+    el.classList.remove('active','done');
+    if (i < active) el.classList.add('done');
+    else if (i === active) el.classList.add('active');
+  }
+}
+
+function renderMarketMap(marketData) {
+  const regions = marketData.regions || [];
+  const countryTier = {}, countryRegion = {};
+  regions.forEach(r => (r.countries||[]).forEach(id => {
+    countryTier[id] = r.tier;
+    countryRegion[id] = r;
+  }));
+  const sorted = [...regions].sort((a,b) => b.penetration - a.penetration);
+
+  document.getElementById('marketBody').innerHTML = `
+    <div class="map-legend">
+      <div class="map-legend-item"><div class="legend-dot" style="background:#1D9E75"></div>Core market</div>
+      <div class="map-legend-item"><div class="legend-dot" style="background:#378ADD"></div>Growth market</div>
+      <div class="map-legend-item"><div class="legend-dot" style="background:#EF9F27"></div>Emerging market</div>
+    </div>
+    <div class="map-wrap" id="mapWrap">
+      <svg id="worldSvg" viewBox="0 0 900 460" style="width:100%;display:block;"></svg>
+      <div id="map-tooltip">
+        <div id="map-tooltip-name"></div>
+        <div id="map-tooltip-imp"></div>
+      </div>
+    </div>
+    <div class="market-table-wrap">
+      <table class="market-table">
+        <thead>
+          <tr>
+            <th>Market Region</th>
+            <th>Penetration %</th>
+            <th>Strategic Role</th>
+            <th>Tier</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sorted.map((r,i) => {
+            const tc = TIER_COLORS[r.tier] || TIER_COLORS.emerging;
+            return `<tr style="${i%2===1?'background:var(--cream)':''}">
+              <td style="font-weight:500;">${r.name}</td>
+              <td style="min-width:140px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="flex:1;height:5px;background:var(--border);border-radius:3px;">
+                    <div style="width:${r.penetration}%;height:100%;background:${tc.fill};border-radius:3px;"></div>
+                  </div>
+                  <span style="font-weight:500;min-width:34px;font-family:'DM Mono',monospace;font-size:0.8rem;">${r.penetration}%</span>
+                </div>
+              </td>
+              <td style="color:var(--muted);max-width:300px;">${(r.importance||'').split('.')[0]}.</td>
+              <td><span class="tier-badge" style="background:${tc.bg};color:${tc.text};">${r.tier}</span></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  const svg   = d3.select('#worldSvg');
+  const tip   = document.getElementById('map-tooltip');
+  const tipN  = document.getElementById('map-tooltip-name');
+  const tipI  = document.getElementById('map-tooltip-imp');
+  const wrap  = document.getElementById('mapWrap');
+  const proj  = d3.geoNaturalEarth1().scale(145).translate([450,240]);
+  const gpath = d3.geoPath(proj);
+
+  d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(world => {
+    svg.selectAll('path')
+      .data(topojson.feature(world, world.objects.countries).features)
+      .join('path')
+      .attr('d', gpath)
+      .attr('fill', d => { const t=countryTier[+d.id]; return t ? TIER_COLORS[t].fill : '#ccc5b0'; })
+      .attr('stroke','rgba(255,255,255,0.6)')
+      .attr('stroke-width', 0.4)
+      .style('cursor', d => countryTier[+d.id] ? 'pointer' : 'default')
+      .on('mousemove', function(event, d) {
+        const reg = countryRegion[+d.id];
+        if (!reg) { tip.style.display='none'; return; }
+        const rect = wrap.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const tc = TIER_COLORS[reg.tier] || TIER_COLORS.emerging;
+        tipN.textContent = reg.name;
+        tipN.style.color = tc.text;
+        tipI.textContent = reg.importance;
+        tip.style.display = 'block';
+        tip.style.left = (x+14+220 > rect.width ? x-230 : x+14) + 'px';
+        tip.style.top  = (y-10) + 'px';
+        d3.select(this).attr('fill', tc.hover);
+      })
+      .on('mouseleave', function(event, d) {
+        tip.style.display = 'none';
+        const t = countryTier[+d.id];
+        d3.select(this).attr('fill', t ? TIER_COLORS[t].fill : '#ccc5b0');
+      });
+  });
+}
+
+async function runAnalysis() {
+  const product = document.getElementById('productInput').value.trim();
+  if (!product) return;
+
+  const btn         = document.getElementById('analyzeBtn');
+  const pipeline    = document.getElementById('pipeline');
+  const errorBox    = document.getElementById('errorBox');
+  const resStrip    = document.getElementById('researchStrip');
+  const prodHeader  = document.getElementById('productHeader');
+  const marketSec   = document.getElementById('marketSection');
+
+  btn.disabled = true;
+  errorBox.classList.remove('visible');
+  resStrip.classList.remove('visible');
+  prodHeader.classList.remove('visible');
+  marketSec.classList.remove('visible');
+  marketSec.style.display = 'none';
+  pipeline.classList.add('visible');
+  setStep(0);
+  document.getElementById('statusMsg').textContent = '';
+  document.getElementById('marketBody').innerHTML = '<div class="market-skeleton">MAPPING GLOBAL PRESENCE…</div>';
+  for (let i=0;i<3;i++) {
+    const c = document.getElementById(`card${i}`);
+    c.classList.remove('visible');
+    c.innerHTML = skeleton();
+  }
+
+  try {
+    const res = await fetch('/api/analyse', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ product })
+    });
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream:true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const event = JSON.parse(line.slice(6));
+
+        if (event.type === 'status') {
+          document.getElementById('statusMsg').textContent = event.message;
+          setStep(event.step - 1);
+          if (event.step === 5) { marketSec.style.display='block'; marketSec.classList.add('visible'); }
+        }
+        if (event.type === 'research') {
+          const r = event.data;
+          resStrip.innerHTML = `
+            <div><div class="research-item-label">Category</div><div class="research-item-value">${r.category||'—'}</div></div>
+            <div><div class="research-item-label">Pricing</div><div class="research-item-value">${r.pricing||'—'}</div></div>
+            <div><div class="research-item-label">Target Customers</div><div class="research-item-value">${r.targetCustomers||'—'}</div></div>
+            <div><div class="research-item-label">Competitors</div><div class="research-item-value">${Array.isArray(r.mainCompetitors) ? r.mainCompetitors.join(', ') : (r.mainCompetitors || '—')}</div></div>`;
+          resStrip.classList.add('visible');
+        }
+        if (event.type === 'task')   renderCard(event.index, event);
+        if (event.type === 'market') renderMarketMap(event.data);
+        if (event.type === 'done') {
+          document.getElementById('displayName').textContent    = event.productName || product;
+          document.getElementById('displayTagline').textContent = event.tagline || '';
+          prodHeader.classList.add('visible');
+          pipeline.classList.remove('visible');
+        }
+        if (event.type === 'error') throw new Error(event.message);
+      }
+    }
+  } catch(err) {
+    errorBox.textContent = `⚠ ${err.message}`;
+    errorBox.classList.add('visible');
+    pipeline.classList.remove('visible');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('productInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runAnalysis();
+});
+</script>
+</body>
+</html>
